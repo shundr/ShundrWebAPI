@@ -26,6 +26,8 @@ import javax.ws.rs.QueryParam;
 
 
 
+import com.shundr.database.bean.UserInfo;
+import com.shundr.response.bean.Captcha;
 import com.shundr.response.bean.Response;
 import com.shundr.response.bean.UserLogin;
 import com.shundr.service.util.DateAdapter;
@@ -54,8 +56,6 @@ public interface BasicService {
 	@GET
 	@Path("/getUserLogout")
 	Response getUserLogout(@QueryParam("access_token") String access_token);
-	
-
 	/**
 	 * KGCheng
 	 * @param cargoSrcPlace
@@ -102,6 +102,61 @@ public interface BasicService {
 			@FormParam("cargoUnitPrice") String cargoDescription,	
 			@FormParam("cargoEndTime") String cargoEndTime,
 			@FormParam("access_token") String access_token);
+	
+	
+	/**
+	 * @author G.Liang
+	 *
+	 */
+	@POST
+	@Path("/registerUser")
+	Response<UserInfo> registerUser(
+			@FormParam("username") String username,
+			@FormParam("userpsw") String userpsw,
+			@FormParam("phone") String phone, 
+			@FormParam("captcha") String captcha);
+
+	
+	/**
+	 * @author G.Liang
+	 *  注册时获取验证码
+	 *  找回密码，获取新验证码
+	 */
+	@GET
+	@Path("/getCaptcha/{phone}")
+	Response<Captcha> getCaptcha(
+			@PathParam("phone") String phone);
+	
+	/**
+	 * @author G.Liang
+	 *
+	 */
+	@GET
+	@Path("/checkUserName/{username}")
+	Response<String> checkUserName(
+			@PathParam("username") String username);
+	
+	/**
+	 * @author G.Liang
+	 * 	 注册时，确认手机号
+	 * 	 找回密码，确认手机号
+	 */
+	@GET
+	@Path("/confirmPhone/{phone}")
+	Response<String> confirmPhone(
+			@PathParam("confirmPhone") String phone);
+	
+	/**
+	 * @author G.Liang
+	 * 	 找回密码，重置密码
+	 */
+	@POST
+	@Path("/resetUserPsw")
+	Response<String> resetUserPsw(
+			@FormParam("phone") String phone,
+			@FormParam("userpsw") String userpsw);
+	
+
 
 	
 }

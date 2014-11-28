@@ -16,7 +16,24 @@ import com.shundr.database.bean.UserInfo;
 public interface UserInfoDao {
 	UserInfo getUserInfoByUserName(String username);
 
-	Integer updateLoginTime(Timestamp timestamp);
+	Integer updateLoginTime(String username, Timestamp timestamp);
 
 	UserInfo getUserInfoByUserPhone(String userphone);
+	
+	/**
+	 * @author G.Liang
+	 */
+	boolean saveRegisterUser(UserInfo userInfo);
+	/**
+	 * @author G.Liang
+	 */
+	boolean getIsExistUser(String username);
+	/**
+	 * @author G.Liang
+	 */
+	boolean getIsExistPhone(String phone);
+	/**
+	 * @author G.Liang
+	 */
+	Integer updateUserPsw(String phone, String userpsw);
 }

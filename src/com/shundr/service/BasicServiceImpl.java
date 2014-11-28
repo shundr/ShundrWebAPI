@@ -43,9 +43,11 @@ import com.shundr.database.dao.CompanyInfoDao;
 import com.shundr.database.dao.TruckInfoDao;
 import com.shundr.database.dao.UserInfoDao;
 import com.shundr.database.dao.UserTruckRelationDao;
+import com.shundr.response.bean.Captcha;
 import com.shundr.response.bean.CargoInfoList;
 import com.shundr.response.bean.Response;
 import com.shundr.response.bean.UserLogin;
+import com.shundr.service.util.CaptchaUtil;
 import com.shundr.service.util.DateUtil;
 import com.shundr.service.util.MD5Encryption;
 import com.shundr.service.util.StrUtil;
@@ -137,7 +139,7 @@ public class BasicServiceImpl implements BasicService {
 				
 				//设定这次登陆时间
 				Timestamp loginTime=new Timestamp(System.currentTimeMillis());
-				userInfoDao.updateLoginTime(loginTime);
+				userInfoDao.updateLoginTime(username,loginTime);
 				
 				
 				response.setDescription("登陆成功");
@@ -311,7 +313,174 @@ public class BasicServiceImpl implements BasicService {
 		return response;
 	}
 	
+	
+	/**
+	 * @author G.Liang
+	 */
+	@Override
+	public Response<UserInfo> registerUser(String username, String psw,
+			String phone, String captcha) {
+		Response<UserInfo> response = new Response();
+		
+		Response captchaResult  = new Response();
+		captchaResult = CaptchaService.authorization(phone);
+		if(captchaResult.getStatus().equals("success")){
+			UserInfo userInfo = new UserInfo();
+			userInfo.setUserName(username);
+			userInfo.setUserPsw(MD5Encryption.getMD5(psw));
+			userInfo.setUserPhone(phone);
+			userInfo.setUserRegesiterTime(new Timestamp(System.currentTimeMillis()));
+			if(userInfoDao.saveRegisterUser(userInfo)){
+				response.setDescription("注册成功");
+				response.setResult(userInfo);
+				response.setStatus("success");
+			}
+		} else {
+			response.setDescription("注册失败");
+			response.setStatus("error");
+		}
+		
+		response.setNumReturn(1);
+		response.setParams("username: "+username+", userpsw: "+psw+", userPhone: "+phone+", captcha: "+captcha);
+		
+		//设置查询的方法
+   	 	try{
+				response.setQueryMethod(new Exception().getStackTrace()[0].getMethodName());
+			}catch(Exception ex){
+					
+			}
+		return response;
+	}
+	
+	/**
+	 * @author G.Liang
+	 */
+	@Override
+	public Response<Captcha> getCaptcha(String phone) {
+		// TODO Auto-generated method stub
+		Response<Captcha> response = new Response<Captcha>();
+		//生成验证码，放入内存中
+		Captcha captcha = new Captcha();
+		String captchaStr = CaptchaUtil.getRandomCaptcha();
+		captcha.setCaptchaStr(captchaStr);
+		captcha.setFirstGetCaptchaTime(new Timestamp(System.currentTimeMillis()));
+		CaptchaService.getCaptchaMap().put(phone, captcha);
+		
+		//发送验证码到手机
+		String resultCode = CaptchaUtil.getCaptcha(phone,captchaStr);
+		
+		response.setResult(captcha);
+		response.setParams("phone: "+phone);
+		response.setNumReturn(1);
+		try{
+			response.setQueryMethod(new Exception().getStackTrace()[0].getMethodName());
+		}catch(Exception ex){
+				
+		}
+		if(resultCode.equals("100")){
+			response.setStatus("success");
+			response.setDescription("发送验证码成功");
+		} else {
+			response.setStatus("error");
+			response.setDescription("发送验证码失败，resultCode: "+resultCode);
+			response.setResult(captcha);
+		}
+		return response;
+	}
 
+	/**
+	 * @author G.Liang
+	 */
+	@Override
+	public Response<String> checkUserName(String username) {
+		Response<String> response = new Response<String>();
+		if(!userInfoDao.getIsExistUser(username)) {
+			//不存在此用户名
+			response.setDescription("不存在此用户名，此用户名可用");
+			response.setResult(username);
+			response.setStatus("success");
+		} else {
+			response.setDescription("存在此用户名，此用户名不可用");
+			response.setResult(username);
+			response.setStatus("error");
+		}
+		
+		response.setNumReturn(1);
+		response.setParams("username: "+username);
+		try{
+			response.setQueryMethod(new Exception().getStackTrace()[0].getMethodName());
+		}catch(Exception ex){
+				
+		}
+		return response;
+	}
+
+	/**
+	 * @author G.Liang
+	 * 	 找回密码，确认手机号
+	 */
+	@Override
+	public Response<String> confirmPhone(String phone) {
+		Response<String> response = new Response<String>();
+		if(!userInfoDao.getIsExistPhone(phone)) {
+			response.setDescription("不存在此手机号，找回密码失败");
+			response.setResult(phone);
+			response.setStatus("error");
+		} else {
+			response.setDescription("存在此手机号，找回密码第一步完成");
+			response.setResult(phone);
+			response.setStatus("success");
+		}
+		
+		response.setNumReturn(1);
+		response.setParams("phone: "+phone);
+		try{
+			response.setQueryMethod(new Exception().getStackTrace()[0].getMethodName());
+		}catch(Exception ex){
+				
+		}
+		return response;
+	}
+
+	/**
+	 * @author G.Liang
+	 * 	 找回密码，重置密码
+	 */
+	@Override
+	public Response<String> resetUserPsw(String phone, String userpsw) {
+		Response<String> response = new Response<String>();
+		Response captchaResult  = new Response();
+		captchaResult = CaptchaService.authorization(phone);
+		if(captchaResult.getStatus().equals("success")){
+			//验证码输入正确，重置密码
+			String userpswMD5 = MD5Encryption.getMD5(userpsw);
+			if(userInfoDao.updateUserPsw(phone,userpswMD5)==1){
+				response.setDescription("重置密码成功");
+				log.info("重置密码成功");
+				response.setStatus("success");
+				response.setResult(phone);
+			} else {
+				response.setDescription("重置密码失败，更新数据库错误");
+				log.error("重置密码失败，更新数据库错误");
+				response.setStatus("error");
+				response.setResult(phone);
+			}
+			
+		} else {
+			response.setDescription("重置密码失败，验证码错误");
+			log.error("重置密码失败，验证码错误");
+			response.setStatus("error");
+			response.setResult(phone);
+		}
+		response.setNumReturn(1);
+		response.setParams("phone: "+ phone);
+		try{
+			response.setQueryMethod(new Exception().getStackTrace()[0].getMethodName());
+		}catch(Exception ex){
+				
+		}
+		return response;
+	}
 
 
 
