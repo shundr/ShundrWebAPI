@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project-module
+  type="WEB"
+  name="ShundrWebAPI"
+  id="myeclipse.1396440471375"
+  context-root="/shundrapi"
+  j2ee-spec="6.0"
+  archive="ShundrWebAPI.war">
+  <attributes>
+    <attribute name="webrootdir" value="WebRoot" />
+  </attributes>
+</project-module>
+
